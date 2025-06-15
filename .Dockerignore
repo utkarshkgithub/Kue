@@ -1,0 +1,8 @@
+venv
+.terraform
+__pycache__
+infrastructure
+.gitignore
+README.md
+k8s
+.env

@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cloud-blog
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: cloud-blog
+  template:
+    metadata:
+      labels:
+        app: cloud-blog
+    spec:
+      containers:
+      - name: cloud-blog
+        image: utkarshkdocker/cloudblog:80latest
+        ports:
+        - containerPort: 8080
+        env:
+        - name: SECRET_KEY
+          value: "secret-key"
+        envFrom:
+        - secretRef:
+            name: db-credentials
+    
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cloud-blog-service
+spec:
+  type: LoadBalancer
+  selector:
+    app: cloud-blog
+  ports:
+    - protocol: TCP
+      # this is the port that the service will expose
+      port: 80
+      # this is the container port
+      targetPort: 8080

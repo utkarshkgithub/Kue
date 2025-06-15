@@ -1,0 +1,8 @@
+venv
+.terraform
+__pycache__
+infrastucture/.terraform.lock.hcl
+infrastucture/terraform.tfstate.backup
+infrastucture/terraform.tfstate
+.env
+k8s/secret.yaml

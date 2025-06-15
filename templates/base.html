@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+     <title>{% block title %} {% endblock %}</title>
+     <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+  </head>
+  <body>
+      <div class="custom-cursor"></div>
+      <header class="main-header">
+        <a class="logo" href="{{ url_for('index')}}">Kue</a>
+        <nav>
+          <ul class="menu">
+            <li>
+              <a href="{{ url_for('about') }}" class="hover-effect">About</a>
+            </li>
+            <li>
+              <a href="{{ url_for('create') }}" class="hover-effect">New Post</a>
+            </li>
+            <li>
+              <button id="theme-toggle" class="theme-toggle">🌓</button>
+            </li>
+          </ul>
+        </nav>
+      </header>
+    <div class="container">
+        {% block content %} {% endblock %}
+    </div>
+    <script src="{{ url_for('static', filename='js/effects.js') }}"></script>
+  </body>
+</html>
