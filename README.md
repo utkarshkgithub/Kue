@@ -43,12 +43,31 @@ Welcome to **Kue**, a cloud-native devops blogging platform. This project demons
     docker push <username>/cloud_blog:latest
     ```
 
-4. **Deploy to Kuernetes**
-    - Apply Kuernetes manifests:
+4. **Deploy to Kuernetes with Network Load Balancer**
+    - Apply Kuernetes manifests with network-aware deployment:
       ```bash
       aws eks --region us-east-2 update-Kueconfig --name my-cluster
-      Kuectl apply -f k8s/
+      cd k8s
+      
+      # Create database secret first
+      kubectl create secret generic db-credentials \
+        --from-literal=PGHOST=your-db-host \
+        --from-literal=PGDATABASE=blogdb \
+        --from-literal=PGUSER=your-db-user \
+        --from-literal=PGPASSWORD=your-db-password \
+        --from-literal=PGPORT=5432
+      
+      # Deploy with network load balancer
+      ./deploy-network-aware.sh
       ```
+    
+    **Alternative manual deployment:**
+    ```bash
+    kubectl apply -f kub.yaml                    # Core application
+    kubectl apply -f nginx-loadbalancer.yaml     # Nginx load balancer
+    kubectl apply -f network-policy.yaml         # Network policies
+    kubectl apply -f hpa.yaml                    # Auto-scaling
+    ```
 
 5. **Access the Application**
     - Find the service endpoint and open it in your browser.

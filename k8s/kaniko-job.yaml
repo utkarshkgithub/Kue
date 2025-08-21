@@ -1,7 +1,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: kaniko-build
+  name: kaniko-build-fixed
 spec:
   backoffLimit: 1
   template:
@@ -10,9 +10,9 @@ spec:
       - name: kaniko
         image: gcr.io/kaniko-project/executor:latest
         args:
-        - "--dockerfile=/workspace/Dockerfile"
+        - "--dockerfile=Dockerfile"
         - "--context=git://github.com/utkarshkgithub/Kue.git"
-        - "--destination=docker.io/utkarshkdocker/cloudblog:jenkins"
+        - "--destination=docker.io/utkarshkdocker/cloudblog:latest"
         - "--verbosity=debug"
         volumeMounts:
         - name: docker-config

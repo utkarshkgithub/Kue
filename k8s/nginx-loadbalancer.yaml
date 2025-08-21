@@ -1,0 +1,149 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-lb-config
+  namespace: default
+data:
+  nginx.conf: |
+    upstream backend {
+        least_conn;  # Load balancing method: least connections
+        server cloud-blog-service:80 max_fails=3 fail_timeout=30s;
+    }
+    
+    server {
+        listen 80;
+        server_name localhost;
+        
+        # Health check endpoint
+        location /health {
+            access_log off;
+            return 200 "healthy\n";
+            add_header Content-Type text/plain;
+        }
+        
+        # Main application routing
+        location / {
+            proxy_pass http://backend;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            
+            # Connection pooling and keepalive
+            proxy_http_version 1.1;
+            proxy_set_header Connection "";
+            
+            # Timeouts
+            proxy_connect_timeout 30s;
+            proxy_send_timeout 30s;
+            proxy_read_timeout 30s;
+            
+            # Buffer settings for better performance
+            proxy_buffering on;
+            proxy_buffer_size 4k;
+            proxy_buffers 8 4k;
+            proxy_busy_buffers_size 8k;
+        }
+        
+        # Static content caching
+        location /static/ {
+            proxy_pass http://backend;
+            proxy_cache_valid 200 1h;
+            expires 1h;
+            add_header Cache-Control "public, immutable";
+        }
+    }
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-lb
+  labels:
+    app: nginx-lb
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: nginx-lb
+  template:
+    metadata:
+      labels:
+        app: nginx-lb
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.25-alpine
+        ports:
+        - containerPort: 80
+        volumeMounts:
+        - name: nginx-config
+          mountPath: /etc/nginx/conf.d
+          readOnly: true
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "100m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 80
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 80
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      volumes:
+      - name: nginx-config
+        configMap:
+          name: nginx-lb-config
+          items:
+          - key: nginx.conf
+            path: default.conf
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-lb-service
+  labels:
+    app: nginx-lb
+spec:
+  type: LoadBalancer
+  selector:
+    app: nginx-lb
+  ports:
+  - port: 80
+    targetPort: 80
+    protocol: TCP
+  sessionAffinity: None
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: kue-blog-ingress
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+    nginx.ingress.kubernetes.io/load-balance: "least_conn"
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: kue-blog.local  # Change this to your domain
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: nginx-lb-service
+            port:
+              number: 80

@@ -1,0 +1,60 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: kue-blog-network-policy
+spec:
+  podSelector:
+    matchLabels:
+      app: cloud-blog
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app: nginx-lb
+    ports:
+    - protocol: TCP
+      port: 8080
+  egress:
+  - to: []  # Allow all egress for database connections
+    ports:
+    - protocol: TCP
+      port: 5432  # PostgreSQL
+    - protocol: TCP
+      port: 443   # HTTPS
+    - protocol: TCP
+      port: 80    # HTTP
+    - protocol: UDP
+      port: 53    # DNS
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: nginx-lb-network-policy
+spec:
+  podSelector:
+    matchLabels:
+      app: nginx-lb
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from: []  # Allow traffic from anywhere (internet)
+    ports:
+    - protocol: TCP
+      port: 80
+  egress:
+  - to:
+    - podSelector:
+        matchLabels:
+          app: cloud-blog
+    ports:
+    - protocol: TCP
+      port: 80
+  - to: []  # Allow DNS
+    ports:
+    - protocol: UDP
+      port: 53
